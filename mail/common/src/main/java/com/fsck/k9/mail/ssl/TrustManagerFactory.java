@@ -85,6 +85,8 @@ public class TrustManagerFactory {
 
         public void checkServerTrusted(X509Certificate[] chain, String authType)
                 throws CertificateException {
+            CertificateBlocklist.rejectCompromisedPublicKeys(chain);
+
             String message;
             X509Certificate certificate = chain[0];
 
