@@ -14,8 +14,8 @@ android {
     namespace = "net.thunderbird.android"
 
     defaultConfig {
-        applicationId = "net.thunderbird.android"
-        testApplicationId = "net.thunderbird.android.tests"
+        applicationId = "net.thunderbird.android.hiltronix"
+        testApplicationId = "net.thunderbird.android.hiltronix.tests"
 
         versionCode = 11
         versionName = "10.1"
