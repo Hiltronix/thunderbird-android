@@ -12,6 +12,12 @@
         android:theme="@style/Theme.Thunderbird.Startup"
         >
 
+        <!-- Do not export saved account settings and passwords to other apps. -->
+        <provider
+            android:name="app.k9mail.feature.migration.provider.SettingsProvider"
+            tools:node="remove"
+            />
+
         <activity
             android:name="com.fsck.k9.ui.settings.account.OpenPgpAppSelectDialog"
             android:configChanges="locale"
