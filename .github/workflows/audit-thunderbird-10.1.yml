@@ -1,0 +1,72 @@
+name: Audit Thunderbird 10.1
+
+on:
+  push:
+    branches:
+      - thunderbird-10.1-custom
+    paths:
+      - '.github/workflows/audit-thunderbird-10.1.yml'
+      - 'app-thunderbird/**'
+      - 'app-common/**'
+      - 'backend/**'
+      - 'build-plugin/**'
+      - 'core/**'
+      - 'feature/**'
+      - 'gradle/**'
+      - 'legacy/**'
+      - 'library/**'
+      - 'mail/**'
+      - 'plugins/**'
+  workflow_dispatch:
+
+concurrency:
+  group: thunderbird-10.1-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout custom Thunderbird
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure Gradle
+        run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+
+      - name: Set up Java 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+
+      - name: Resolve release runtime dependencies
+        run: ./gradlew :app-thunderbird:dependencies --configuration fossReleaseRuntimeClasspath --no-daemon > resolved-foss-release-dependencies.txt
+
+      - name: Upload resolved dependencies
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: thunderbird-10.1-runtime-dependencies
+          path: resolved-foss-release-dependencies.txt
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run Android lint on release variant
+        run: ./gradlew :app-thunderbird:lintFossRelease --no-daemon
+
+      - name: Upload Android lint reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: thunderbird-10.1-android-lint
+          path: app-thunderbird/build/reports/lint-results-*
+          if-no-files-found: warn
+          retention-days: 7
