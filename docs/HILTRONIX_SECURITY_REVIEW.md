@@ -26,7 +26,8 @@ merged-manifest validation, and on-device mail/account import checks pass.
   transfer from the custom app. It does **not** remove file-based account-settings
   import. The official app's own provider is not modified.
 - Direct dependency upgrades: Apache Mime4j `0.8.9 -> 0.8.14`,
-  jsoup `1.18.1 -> 1.23.2`, OkHttp `4.12.0 -> 4.12.1`.
+  jsoup `1.18.1 -> 1.23.2`, OkHttp `4.12.0 -> 4.12.1`, and
+  Apache HttpClient5 `5.4.1 -> 5.6.5`.
   These require compatibility testing before deployment.
 - The mail TLS trust manager now checks the SHA-256 of the encoded public key
   (SPKI) of every server certificate against eight compromised eMudhra keys.
@@ -63,6 +64,17 @@ merged-manifest validation, and on-device mail/account import checks pass.
    References:
    https://github.com/thunderbird/thunderbird-android/issues/11789
    https://lysine.dev/okhttp/changelogs/changelog_4x/
+
+4. **Apache HttpClient hostname validation - CVE-2025-27820 and CVE-2026-71290.**
+   The original `5.4.1` is within the affected range for incorrect public
+   suffix-list verification. A separate 2026 vulnerability affects async
+   HttpClient in versions before `5.6.4`; this mail stack uses the classic
+   `DefaultHostnameVerifier`, but the upgrade avoids retaining the affected
+   version. This branch selects `5.6.5`. Verify this API remains compatible
+   with the mail module.
+   References:
+   https://github.com/advisories/GHSA-73m2-qfq3-56cx
+   https://advisories.gitlab.com/maven/org.apache.httpcomponents.client5/httpclient5/CVE-2026-71290/
 
 ### Additional reviewed areas
 
