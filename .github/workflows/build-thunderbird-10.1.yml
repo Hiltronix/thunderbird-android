@@ -22,6 +22,10 @@ on:
       - 'plugins/**'
   workflow_dispatch:
 
+concurrency:
+  group: thunderbird-10.1-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -45,6 +49,9 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+
+      - name: Test mail TLS certificate validation
+        run: ./gradlew :mail:common:test --no-daemon
 
       - name: Build unsigned release APK
         run: ./gradlew :app-thunderbird:assembleFossRelease --no-daemon
