@@ -1,17 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    xmlns:tools="http://schemas.android.com/tools"
-    xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <application>
-
-        <provider
-            android:name="app.k9mail.feature.migration.provider.SettingsProvider"
-            android:authorities="${applicationId}.settings"
-            android:exported="true"
-            tools:ignore="ExportedContentProvider"
-            />
-
-    </application>
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Hiltronix: No account settings provider is exported or registered.
+         Explicit file-based account export/import remains available. -->
+    <application />
 </manifest>
