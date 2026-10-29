@@ -28,6 +28,7 @@ class MessageWebView : WebView, KoinComponent {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun configure(config: WebViewConfig) {
         isVerticalScrollBarEnabled = true
         setVerticalScrollbarOverlay(true)
@@ -56,9 +57,7 @@ class MessageWebView : WebView, KoinComponent {
             // Untrusted message HTML must not read local files. Inline
             // attachment rendering uses content:// through the resolver.
             allowFileAccess = false
-            @Suppress("DEPRECATION")
             allowFileAccessFromFileURLs = false
-            @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = false
             loadsImagesAutomatically = true
             setRenderPriority(RenderPriority.HIGH)
