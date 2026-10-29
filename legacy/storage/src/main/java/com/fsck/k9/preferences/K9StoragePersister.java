@@ -158,7 +158,8 @@ public class K9StoragePersister implements StoragePersister {
             while (cursor.moveToNext()) {
                 String key = cursor.getString(0);
                 String value = cursor.getString(1);
-                Timber.d("Loading key '%s', value = '%s'", key, value);
+                // Account settings contain passwords and OAuth authorization
+                // tokens. Never log preference values (or their identifiers).
                 loadedValues.put(key, value);
             }
         } finally {
