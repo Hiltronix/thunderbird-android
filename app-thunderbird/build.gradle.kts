@@ -17,8 +17,17 @@ android {
         applicationId = "net.thunderbird.android.hiltronix"
         testApplicationId = "net.thunderbird.android.hiltronix.tests"
 
-        versionCode = 11
+        // Signed CI releases use a daily increasing Android code and an
+        // embedded revision so installed builds can be distinguished.
+        // Standalone/local builds retain the upstream code and are labelled
+        // "Development build" rather than impersonating an official revision.
+        versionCode = providers.environmentVariable("HILTRONIX_VERSION_CODE").orNull?.toInt() ?: 11
         versionName = "10.1"
+        resValue(
+            "string",
+            "hiltronix_revision",
+            providers.environmentVariable("HILTRONIX_REVISION").orNull ?: "Development build",
+        )
 
         // Keep in sync with the resource string array "supported_languages"
         resourceConfigurations.addAll(
