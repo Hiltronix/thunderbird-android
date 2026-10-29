@@ -157,7 +157,17 @@ jobs:
               echo "::error::Unexpected Android versionCode"
               exit 1
           fi
-          echo "Verified Hiltronix revision $HILTRONIX_REVISION"
+          # Security regression guard: the exported SettingsProvider must not
+          # be available to any other app, even if manifest merging changes.
+          if "$build_tools/aapt" dump xmltree "$apk" AndroidManifest.xml | grep -Fq "app.k9mail.feature.migration.provider.SettingsProvider"; then
+              echo "::error::Sensitive account-settings provider was unexpectedly packaged"
+              exit 1
+          fi
+          if "$build_tools/aapt" dump badging "$apk" | grep -Fq "application-debuggable"; then
+              echo "::error::Release APK is debuggable"
+              exit 1
+          fi
+          echo "Verified Hiltronix revision $HILTRONIX_REVISION and release manifest"
           sha256sum "$apk"
           cp "$apk" "${RUNNER_TEMP}/Thunderbird-10.1-Hiltronix-SIGNED.apk"
 
