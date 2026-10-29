@@ -41,6 +41,51 @@ class LocalKeyStoreTest {
     }
 
     @Test
+    fun `certificate persists after reopening the local keystore`() {
+        val certificate = readCertificate(host)
+        localKeyStore.addCertificate(host, port, certificate)
+
+        val reopened = LocalKeyStore(directoryProvider = { tempDirectory })
+
+        assertThat(reopened.isValidCertificate(certificate, host, port)).isTrue()
+    }
+
+    @Test
+    fun `successive certificate writes preserve previously saved entries`() {
+        val first = readCertificate(host)
+        val second = readCertificate("mail.another-domain.example")
+        localKeyStore.addCertificate(host, port, first)
+        localKeyStore.addCertificate("mail.another-domain.example", port, second)
+
+        val reopened = LocalKeyStore(directoryProvider = { tempDirectory })
+
+        assertThat(reopened.isValidCertificate(first, host, port)).isTrue()
+        assertThat(reopened.isValidCertificate(second, "mail.another-domain.example", port)).isTrue()
+    }
+
+    @Test
+    fun `completed certificate updates leave no temporary keystore files`() {
+        val certificate = readCertificate(host)
+        localKeyStore.addCertificate(host, port, certificate)
+
+        val temporaryFiles = tempDirectory.listFiles().orEmpty()
+            .filter { it.name.startsWith("KeyStore_v1.bks.") && it.name.endsWith(".tmp") }
+
+        assertThat(temporaryFiles.isEmpty()).isTrue()
+    }
+
+    @Test
+    fun `a stale incomplete write does not replace the last saved keystore`() {
+        val certificate = readCertificate(host)
+        localKeyStore.addCertificate(host, port, certificate)
+        java.io.File(tempDirectory, "KeyStore_v1.bks.interrupted.tmp").writeText("incomplete")
+
+        val reopened = LocalKeyStore(directoryProvider = { tempDirectory })
+
+        assertThat(reopened.isValidCertificate(certificate, host, port)).isTrue()
+    }
+
+    @Test
     fun `host names must match`() {
         val certificate = readCertificate(host)
         localKeyStore.addCertificate(host, port, certificate)
