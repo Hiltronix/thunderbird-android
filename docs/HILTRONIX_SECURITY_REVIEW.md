@@ -54,21 +54,12 @@ Explicit cloud/device transfer exclusions were already added.
   build now executes the targeted Robolectric storage regression test and
   continues running `:mail:common:test`.
 
-**Deferred encryption change — user-approved for a future revision (2026-10-29):**
-Application-level encryption of stored passwords and OAuth state is
-**explicitly out of scope for the initial production release**. Thunderbird
-10.1 will continue using its private SQLite database and Android's
-system-level application isolation/encryption. This is an accepted residual
-risk, not a completed fix, and must be revisited in a later Hiltronix
-revision. Encrypting credentials at rest is not a
-single safe library upgrade. A careful migration must cover both account
-passwords and serialized OAuth refresh/access tokens, handle preexisting
-unencrypted settings, avoid plaintext rollback, and provide recovery when
-Android Keystore keys become unavailable. The app's minimum API level and
-account backup/import compatibility also need consideration. Do not
-silently encrypt all preferences or bind background IMAP/SMTP credentials
-to per-use biometric prompts: that could break unattended mail syncing.
-This redesign remains an open security task.
+**Credential-storage policy (2026-10-29):** This fork retains
+Thunderbird 10.1's app-private SQLite storage for account passwords and OAuth
+state, protected by Android's application sandbox and device encryption.
+The owner reviewed the design trade-offs and chose to keep the existing
+approach. This is a deliberate design decision, not an enhancement request.
+Protective changes against logging account credentials remain in place.
 
 ### Remaining validation
 
@@ -80,9 +71,9 @@ This redesign remains an open security task.
 
 ## Production readiness decision — 2026-10-29
 
-**Approved deferral:** App-level encryption of the existing private SQLite
-preferences database (saved email passwords and OAuth credentials). Do not
-undertake an untested migration before the first production release.
+**Storage decision:** Retain the existing app-private SQLite account
+settings implementation. The review of its Android sandbox/device-security
+protections is complete; no storage redesign is scheduled.
 
 **Release prerequisites:**
 
@@ -163,9 +154,8 @@ result, not simply the workflow success indicator.
    Mitigation now committed: password visibility and authentication state are
    ephemeral (not `rememberSaveable`), and the component clears those values
    on activity `ON_STOP`. The need for authentication is now based on whether
-   a stored password is nonempty. A true cryptographic fix would require
-   reworking how credentials are stored/revealed using a Keystore-backed
-   operation; it is **not** claimed fixed by the UI-state change.
+   a stored password is nonempty. The UI-state mitigation does not cryptographically bind password
+   visibility to authentication; the residual CodeQL finding is documented.
    Reference:
    https://codeql.github.com/codeql-query-help/java/java-android-insecure-local-authentication/
 
