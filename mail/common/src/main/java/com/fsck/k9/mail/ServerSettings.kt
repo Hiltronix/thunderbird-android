@@ -27,6 +27,14 @@ data class ServerSettings @JvmOverloads constructor(
         require(password?.contains(LINE_BREAK) != true) { "password must not contain line break" }
     }
 
+    // Kotlin data classes normally print every constructor property, including
+    // password and arbitrary provider-specific extra fields. Diagnostic logs
+    // must never leak server credentials or account identifiers.
+    override fun toString(): String {
+        return "ServerSettings(type=$type, port=$port, connectionSecurity=$connectionSecurity, " +
+            "authenticationType=$authenticationType, accountDetails=[REDACTED])"
+    }
+
     fun newPassword(newPassword: String?): ServerSettings {
         return this.copy(password = newPassword)
     }
