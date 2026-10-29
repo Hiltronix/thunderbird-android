@@ -70,6 +70,9 @@ jobs:
       - name: Test TLS certificate validation
         run: ./gradlew :mail:common:test :mail:testing:test --no-daemon
 
+      - name: Test credential-storage logging safeguards
+        run: ./gradlew :legacy:storage:testDebugUnitTest --tests 'com.fsck.k9.preferences.StoragePersisterTest' --no-daemon
+
       - name: Lint release app
         run: ./gradlew :app-thunderbird:lintFossRelease --no-daemon
 
