@@ -5,12 +5,14 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import app.k9mail.core.ui.compose.common.activity.LocalActivity
 import app.k9mail.core.ui.compose.designsystem.atom.textfield.TextFieldOutlinedPassword
 
@@ -36,16 +38,33 @@ fun TextFieldOutlinedPasswordBiometric(
     isRequired: Boolean = false,
     hasError: Boolean = false,
 ) {
-    var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
-    var isAuthenticated by rememberSaveable { mutableStateOf(false) }
-    var isAuthenticationRequired by rememberSaveable { mutableStateOf(true) }
+    // An authentication decision is session-local, never saved to Bundle/
+    // saved-state across process recreation or activity configuration changes.
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    var isAuthenticated by remember { mutableStateOf(false) }
 
-    // If the entire password was removed, we allow the user to unmask the text field without requiring authentication.
-    if (value.isEmpty()) {
-        isAuthenticationRequired = false
-    }
-
+    // Empty new passwords may be displayed without an unlock prompt; an
+    // existing non-empty password requires biometric/device authentication.
+    val isAuthenticationRequired = value.isNotEmpty()
     val activity = LocalActivity.current as FragmentActivity
+
+    DisposableEffect(activity) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                // Require authentication again after the app leaves the screen.
+                isPasswordVisible = false
+                isAuthenticated = false
+                activity.setSecure(false)
+            }
+        }
+        activity.lifecycle.addObserver(observer)
+        onDispose {
+            activity.lifecycle.removeObserver(observer)
+            isPasswordVisible = false
+            isAuthenticated = false
+            activity.setSecure(false)
+        }
+    }
 
     TextFieldOutlinedPassword(
         value = value,
@@ -79,13 +98,7 @@ fun TextFieldOutlinedPasswordBiometric(
         },
     )
 
-    DisposableEffect(key1 = "secureWindow") {
-        activity.setSecure(isPasswordVisible)
 
-        onDispose {
-            activity.setSecure(false)
-        }
-    }
 }
 
 private fun showBiometricPrompt(
