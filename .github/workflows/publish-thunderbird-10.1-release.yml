@@ -1,0 +1,112 @@
+name: Publish Thunderbird 10.1 Hiltronix 2026.10.29.27
+
+on:
+  push:
+    branches: [thunderbird-10.1-custom]
+    paths:
+      - '.github/workflows/publish-thunderbird-10.1-release.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish-verified-apk:
+    if: github.repository == 'Hiltronix/thunderbird-android' && github.ref == 'refs/heads/thunderbird-10.1-custom'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: v10.1-hiltronix-2026.10.29.27
+      SOURCE_COMMIT: dc4eda39cbfa154be23f7782303b88acc32d081f
+      EXPECTED_SHA256: 495c86c1e1a3870103dd356bec86f7af54575372891b10c02f1ba5c4f900956f
+      APK_NAME: Thunderbird-10.1-Hiltronix-2026.10.29.27-signed.apk
+
+    steps:
+      - name: Verify the release does not already exist
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $RELEASE_TAG already exists. Refusing to overwrite it."
+            exit 1
+          fi
+
+      - name: Download previously verified signed APK artifact
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          gh run download 40913098496 --repo "$GITHUB_REPOSITORY" \
+            --name Thunderbird-10.1-Hiltronix-SIGNED --dir release
+          mapfile -d '' apks < <(find release -maxdepth 1 -type f -name '*.apk' -print0)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one signed APK in downloaded artifact"
+            exit 1
+          fi
+          mv -- "${apks[0]}" "release/$APK_NAME"
+
+      - name: Verify exact APK SHA-256 before publishing
+        run: |
+          set -euo pipefail
+          cd release
+          echo "$EXPECTED_SHA256  $APK_NAME" | sha256sum --check --status
+          echo "$EXPECTED_SHA256  $APK_NAME" > SHA256SUMS.txt
+          echo "SHA-256 verified: $EXPECTED_SHA256"
+
+      - name: Write release notes
+        run: |
+          cat > release/RELEASE_NOTES.md <<'EOF'
+          ## Thunderbird 10.1 — Hiltronix custom Android build
+
+          **Unofficial customization** of [Mozilla Thunderbird for Android](https://github.com/thunderbird/thunderbird-android), based on Thunderbird 10.1. Its primary purpose is to **preserve user control over email message-body font size**, which is unavailable in newer versions.
+
+          ### Included changes
+
+          - Independent Android app ID `net.thunderbird.android.hiltronix` and separately controlled APK signing key, preventing official Play Store updates from replacing this application.
+          - Date-based Hiltronix revision visible in About Thunderbird, with incrementing Android version codes for updates.
+          - Updated Apache Mime4j, jsoup, OkHttp, Apache HttpClient 5, and Commons Lang libraries.
+          - Targeted IMAP/SMTP certificate validation hardening and safer trusted-certificate file saving.
+          - Safer attachment-cache writes and restrictions on untrusted HTML email WebView file access.
+          - Removed externally accessible account-settings provider; hardened Android backup and device-transfer settings.
+          - Reduced credential exposure in logs and diagnostic strings; regression tests, dependency audit, CodeQL and Android Lint in GitHub Actions.
+
+          ### Verified build provenance
+
+          - **Hiltronix revision:** `2026.10.29.27`
+          - **Upstream app version:** `10.1`
+          - **Android versionCode:** `2026102927`
+          - **Android application ID:** `net.thunderbird.android.hiltronix`
+          - **Signed APK source commit:** `dc4eda39cbfa154be23f7782303b88acc32d081f`
+          - **Successful CI workflow:** https://github.com/Hiltronix/thunderbird-android/actions/runs/40913098496
+          - **Signing certificate SHA-256:** `ab462f44c89ff8873a5e52dda4c5a33789d52799244b13146ebe1ef40143d706`
+          - **APK SHA-256:** `495c86c1e1a3870103dd356bec86f7af54575372891b10c02f1ba5c4f900956f`
+
+          The signed build passed its GitHub Actions checks. It was installed and tested on a Pixel 6: settings import, entering an account password, sending and receiving messages, and About-screen revision display worked. Other features, including individual OAuth providers, are not all confirmed.
+
+          **Security / compatibility note:** This fork retains Thunderbird's private SQLite credential storage protected by Android's app sandbox and device encryption. Separate credential encryption was evaluated and is not planned. Custom Android package identity may require independent OAuth registration for some providers.
+
+          This release is not affiliated with, endorsed by, or supported by Mozilla Thunderbird. Credit for the original app belongs to [Thunderbird for Android](https://github.com/thunderbird/thunderbird-android), K-9 Mail, and their contributors. The original licenses remain applicable.
+
+          Changes and notes: [README on custom branch](https://github.com/Hiltronix/thunderbird-android/tree/thunderbird-10.1-custom) · [Security review](https://github.com/Hiltronix/thunderbird-android/blob/thunderbird-10.1-custom/docs/HILTRONIX_SECURITY_REVIEW.md).
+          EOF
+
+      - name: Publish GitHub release at the signed build source commit
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            "release/$APK_NAME" \
+            "release/SHA256SUMS.txt" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SOURCE_COMMIT" \
+            --title "Thunderbird 10.1 — Hiltronix 2026.10.29.27" \
+            --notes-file release/RELEASE_NOTES.md \
+            --latest=false
+
+      - name: Verify the published release assets
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY"
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq '.assets[].name' | tee /tmp/release-assets.txt
+          grep -Fxq "$APK_NAME" /tmp/release-assets.txt
+          grep -Fxq SHA256SUMS.txt /tmp/release-assets.txt
