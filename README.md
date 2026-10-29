@@ -1,3 +1,40 @@
+# Hiltronix Thunderbird 10.1 — customized Android build
+
+> **Unofficial fork of [Thunderbird for Android](https://github.com/thunderbird/thunderbird-android).** The customization and signed APK are maintained on the [`thunderbird-10.1-custom` branch](https://github.com/Hiltronix/thunderbird-android/tree/thunderbird-10.1-custom). The `main` branch remains upstream-based source, not the custom application. This fork is not distributed or supported by Mozilla Thunderbird.
+
+## Why this fork exists
+
+The primary purpose of this customization is to **retain Thunderbird for Android 10.1 and its user-adjustable email message-body text size**, a control no longer available in newer Thunderbird Android releases. The fork also updates selected libraries and includes targeted reliability, privacy, and security improvements without changing Thunderbird's core mail experience.
+
+## Improvements and fixes in the custom build
+
+- **Preserved message-body text sizing:** Based on Thunderbird **10.1**, retaining the ability to adjust email body text size independently of the rest of the interface.
+- **Independent installation and signing:** Uses Android application ID `net.thunderbird.android.hiltronix` and a separately controlled signing certificate, so official Play Store updates do not overwrite the custom app. The regular settings-file import workflow is retained.
+- **Hiltronix revision identification:** Displays a date-based `YYYY.MM.DD.Rev` build revision in *Settings → About Thunderbird*, with a matching increasing Android version code for subsequent updates.
+- **Updated libraries:** Apache Mime4j **0.8.14**, jsoup **1.23.2**, OkHttp **4.12.1**, Apache HttpClient 5 **5.6.5**, and Apache Commons Lang **3.18.0**, replacing older 10.1 dependencies.
+- **Mail TLS protection:** Blocks known compromised eMudhra certificate public keys during IMAP/SMTP TLS verification while retaining support for explicitly trusted self-hosted mail-server certificates.
+- **Safer trusted-certificate storage:** Stages and syncs certificate-keystore changes before atomically replacing the saved file, reducing corruption risk from interrupted writes. Added persistence and interrupted-write tests.
+- **Safer attachment sharing:** Copies attachments into a temporary cache file before atomically publishing the completed copy; prevents failed or partial copies from being reused.
+- **Hardened HTML email display:** Keeps JavaScript disabled, explicitly disables WebView local-file access, and retains default blocking of remote message images.
+- **Restricted inter-app account-data exposure:** Removes the exported settings content provider that could share account credentials with other packages. Manual settings import/export remains available.
+- **Backup and privacy safeguards:** Disables Android application backups and device-to-device data extraction for the app; uses a no-op telemetry implementation in the release build.
+- **Sensitive-data logging fixes:** Stops logging stored preference values (which can include passwords and OAuth state), and redacts account details from `ServerSettings` diagnostic text.
+- **Password-display and test hardening:** Clears password-reveal authentication state when the app is backgrounded; limits the testing-only TLS trust manager to its expected mock certificate.
+- **Automated verification:** GitHub Actions builds and signs a non-debuggable APK using repository secrets, verifies the package ID and signature, runs mail/security regression tests and Android Lint, and performs OSV dependency and CodeQL scans.
+
+## Builds, compatibility, and upstream credit
+
+- **Custom source:** [`thunderbird-10.1-custom`](https://github.com/Hiltronix/thunderbird-android/tree/thunderbird-10.1-custom).
+- **Last device-tested signed APK reported:** Hiltronix revision **2026.10.29.27** — [successful signed build](https://github.com/Hiltronix/thunderbird-android/actions/runs/40913098496). Installation, account-settings import, and sending/receiving mail have been tested; not every feature or OAuth provider has been verified.
+- **Important:** This is **not an official Thunderbird release**. Official Google Play / F-Droid download links, release badges, and signing-certificate fingerprints in the original README below refer to the **upstream application**, not this custom build. Some OAuth providers may require separate client registrations or redirect configuration for the custom package.
+- **Original project and developers:** [Mozilla Thunderbird for Android](https://github.com/thunderbird/thunderbird-android), built on [K-9 Mail](https://k9mail.app/). All original development credit remains with the upstream maintainers and contributors. Hiltronix is responsible only for the modifications described here. The original project licensing and notices remain in force.
+
+For detailed changes and verification notes, see the [custom security review](https://github.com/Hiltronix/thunderbird-android/blob/thunderbird-10.1-custom/docs/HILTRONIX_SECURITY_REVIEW.md) and [release checklist](https://github.com/Hiltronix/thunderbird-android/blob/thunderbird-10.1-custom/docs/HILTRONIX_RELEASE_CHECKLIST.md).
+
+---
+
+## Original Thunderbird for Android README
+
 # Thunderbird for Android
 
 <a href="https://play.google.com/store/apps/details?id=net.thunderbird.android&referrer=utm_campaign%3Dandroid_metadata%26utm_medium%3Dweb%26utm_source%3Dgithub.com%26utm_content%3Dbadge" target="_blank"><img src="./docs/assets/get-it-on-play.png" alt="Get it on Google Play" height="28"></a>
