@@ -17,6 +17,7 @@ on:
       - 'library/**'
       - 'mail/**'
       - 'plugins/**'
+      - 'scripts/audit_osv_gradle.py'
   workflow_dispatch:
 
 concurrency:
@@ -58,6 +59,18 @@ jobs:
           path: resolved-foss-release-dependencies.txt
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Check resolved Maven dependencies against OSV
+        run: python3 scripts/audit_osv_gradle.py resolved-foss-release-dependencies.txt
+
+      - name: Upload OSV vulnerability report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: thunderbird-10.1-osv-vulnerabilities
+          path: thunderbird-osv-security-report.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Run Android lint on release variant
         run: ./gradlew :app-thunderbird:lintFossRelease --no-daemon
