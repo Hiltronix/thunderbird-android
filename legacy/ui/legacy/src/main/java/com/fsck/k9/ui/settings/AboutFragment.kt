@@ -39,6 +39,12 @@ class AboutFragment : Fragment() {
         val versionLayout = view.findViewById<View>(R.id.versionLayout)
         versionLayout.setOnClickListener { displayChangeLog() }
 
+        // The revision is inserted by the Thunderbird release build, not
+        // calculated when the user opens the About screen.
+        val revisionLayout = view.findViewById<View>(R.id.hiltronixRevisionLayout)
+        revisionLayout.visibility = if (requireContext().packageName == HILTRONIX_PACKAGE_NAME) View.VISIBLE else View.GONE
+        view.findViewById<MaterialTextView>(R.id.hiltronixRevision).text = getString(R.string.hiltronix_revision)
+
         val authorsLayout = view.findViewById<View>(R.id.authorsLayout)
         authorsLayout.setOnClickListener {
             openUrl(getString(R.string.app_authors_url))
@@ -90,6 +96,8 @@ class AboutFragment : Fragment() {
     }
 
     companion object {
+        private const val HILTRONIX_PACKAGE_NAME = "net.thunderbird.android.hiltronix"
+
         private val USED_LIBRARIES = arrayOf(
             Library(
                 "Android Jetpack libraries",
