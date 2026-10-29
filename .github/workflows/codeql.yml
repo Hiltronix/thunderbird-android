@@ -50,4 +50,17 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@28deaeda66b76a05916b6923827895f2b14ab387 # v3.28.16
+        with:
+          output: codeql-sarif-results
+
+      # Artifact allows auditing actual findings without depending on access
+      # to the GitHub code-scanning alert API.
+      - name: Archive CodeQL SARIF results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: thunderbird-10.1-codeql-sarif
+          path: codeql-sarif-results/*.sarif
+          if-no-files-found: warn
+          retention-days: 14
 
