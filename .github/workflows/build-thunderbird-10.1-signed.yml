@@ -20,11 +20,13 @@ on:
       - 'library/**'
       - 'mail/**'
       - 'plugins/**'
+      - 'scripts/generate_hiltronix_revision.py'
   workflow_dispatch:
 
 # Never run this workflow for pull requests or unrelated forks.
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: thunderbird-10.1-signed-${{ github.ref }}
@@ -55,6 +57,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+
+      - name: Generate daily Hiltronix revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/generate_hiltronix_revision.py
 
       - name: Test TLS certificate validation
         run: ./gradlew :mail:common:test --no-daemon
@@ -142,6 +149,11 @@ jobs:
               echo "::error::Unexpected APK application ID"
               exit 1
           fi
+          if ! "$build_tools/aapt" dump badging "$apk" | grep -Fq "versionCode='$HILTRONIX_VERSION_CODE'"; then
+              echo "::error::Unexpected Android versionCode"
+              exit 1
+          fi
+          echo "Verified Hiltronix revision $HILTRONIX_REVISION"
           sha256sum "$apk"
           cp "$apk" "${RUNNER_TEMP}/Thunderbird-10.1-Hiltronix-SIGNED.apk"
 
