@@ -172,8 +172,9 @@ sign with your own private key, and verify the signature. It writes
 
 A public certificate alone is insufficient: APK signing requires its
 corresponding **private key**, usually stored in a Java or PKCS#12 keystore.
-Do not commit or upload that keystore or its password to GitHub, and do not
-send the private key in chat.
+Never commit the keystore or passwords as repository files, and do not
+send the private key in chat. The GitHub Actions release process instead stores
+these values in encrypted GitHub repository secrets.
 
 Install the locally signed APK only after verifying the signing fingerprint
 and recording a backup of the keystore. Future updates to this custom package
