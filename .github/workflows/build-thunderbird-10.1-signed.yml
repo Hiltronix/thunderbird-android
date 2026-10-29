@@ -68,7 +68,7 @@ jobs:
         run: python3 scripts/generate_hiltronix_revision.py
 
       - name: Test TLS certificate validation
-        run: ./gradlew :mail:common:test --no-daemon
+        run: ./gradlew :mail:common:test :mail:testing:test --no-daemon
 
       - name: Lint release app
         run: ./gradlew :app-thunderbird:lintFossRelease --no-daemon
