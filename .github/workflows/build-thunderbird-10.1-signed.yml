@@ -1,0 +1,160 @@
+name: Build Signed Thunderbird 10.1 APK
+
+on:
+  push:
+    branches:
+      - thunderbird-10.1-custom
+    paths:
+      - '.github/workflows/build-thunderbird-10.1-signed.yml'
+      - 'app-thunderbird/**'
+      - 'app-common/**'
+      - 'backend/**'
+      - 'build-plugin/**'
+      - 'core/**'
+      - 'feature/**'
+      - 'gradle/**'
+      - 'gradle.properties'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'legacy/**'
+      - 'library/**'
+      - 'mail/**'
+      - 'plugins/**'
+  workflow_dispatch:
+
+# Never run this workflow for pull requests or unrelated forks.
+permissions:
+  contents: read
+
+concurrency:
+  group: thunderbird-10.1-signed-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed-release:
+    if: github.repository == 'Hiltronix/thunderbird-android' && github.ref == 'refs/heads/thunderbird-10.1-custom'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Thunderbird 10.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure Gradle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.gradle
+          cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+
+      - name: Set up Java 17
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@06832c7b30a0129d7fb559bcc6e43d26f6374244 # v4.3.1
+
+      - name: Test TLS certificate validation
+        run: ./gradlew :mail:common:test --no-daemon
+
+      - name: Lint release app
+        run: ./gradlew :app-thunderbird:lintFossRelease --no-daemon
+
+      - name: Restore signing material privately
+        shell: bash
+        env:
+          THUNDERBIRD_KEYSTORE_BASE64: ${{ secrets.THUNDERBIRD_KEYSTORE_BASE64 }}
+          THUNDERBIRD_KEYSTORE_PASSWORD: ${{ secrets.THUNDERBIRD_KEYSTORE_PASSWORD }}
+          THUNDERBIRD_KEY_ALIAS: ${{ secrets.THUNDERBIRD_KEY_ALIAS }}
+          THUNDERBIRD_KEY_PASSWORD: ${{ secrets.THUNDERBIRD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64
+          import binascii
+          import os
+          from pathlib import Path
+
+          names = (
+              "THUNDERBIRD_KEYSTORE_BASE64",
+              "THUNDERBIRD_KEYSTORE_PASSWORD",
+              "THUNDERBIRD_KEY_ALIAS",
+              "THUNDERBIRD_KEY_PASSWORD",
+          )
+          missing = [name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit("Missing required GitHub Actions secrets: " + ", ".join(missing))
+
+          try:
+              keystore_data = base64.b64decode(os.environ["THUNDERBIRD_KEYSTORE_BASE64"], validate=True)
+          except binascii.Error:
+              raise SystemExit("THUNDERBIRD_KEYSTORE_BASE64 is not valid Base64") from None
+          if not keystore_data:
+              raise SystemExit("Signing keystore is empty")
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "thunderbird-release.p12"
+          path.write_bytes(keystore_data)
+          path.chmod(0o600)
+
+          # Write Java properties without echoing passwords into logs or the repository.
+          def escape(value):
+              return "".join(("\\" + ch) if ch in "\\:=#! " else
+                             "\\n" if ch == "\n" else
+                             "\\r" if ch == "\r" else
+                             "\\t" if ch == "\t" else ch for ch in value)
+
+          properties = {
+              "tb.release.storeFile": str(path),
+              "tb.release.storePassword": os.environ["THUNDERBIRD_KEYSTORE_PASSWORD"],
+              "tb.release.keyAlias": os.environ["THUNDERBIRD_KEY_ALIAS"],
+              "tb.release.keyPassword": os.environ["THUNDERBIRD_KEY_PASSWORD"],
+          }
+          properties_path = Path(".signing/tb.release.upload.properties")
+          properties_path.parent.mkdir(exist_ok=True)
+          properties_path.write_text(
+              "".join(f"{key}={escape(value)}\n" for key, value in properties.items()),
+              encoding="utf-8",
+          )
+          properties_path.chmod(0o600)
+          print("Signing material restored (private keys and passwords suppressed)")
+          PY
+
+      - name: Build signed release APK
+        run: ./gradlew :app-thunderbird:assembleFossRelease --no-daemon
+
+      - name: Verify signed APK and application ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(app-thunderbird/build/outputs/apk/foss/release/*.apk)
+          if [ "${#apks[@]}" -ne 1 ]; then
+              echo "::error::Expected exactly one release APK"
+              exit 1
+          fi
+          apk="${apks[0]}"
+          build_tools="$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -n 1)"
+          "$build_tools/apksigner" verify --verbose --print-certs "$apk"
+          package="$("$build_tools/aapt" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -n 1)"
+          if [ "$package" != 'net.thunderbird.android.hiltronix' ]; then
+              echo "::error::Unexpected APK application ID"
+              exit 1
+          fi
+          sha256sum "$apk"
+          cp "$apk" "${RUNNER_TEMP}/Thunderbird-10.1-Hiltronix-SIGNED.apk"
+
+      - name: Upload verified signed APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: Thunderbird-10.1-Hiltronix-SIGNED
+          path: ${{ runner.temp }}/Thunderbird-10.1-Hiltronix-SIGNED.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Delete signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f "$RUNNER_TEMP/thunderbird-release.p12" .signing/tb.release.upload.properties
