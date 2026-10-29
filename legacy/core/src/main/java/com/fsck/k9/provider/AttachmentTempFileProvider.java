@@ -75,15 +75,28 @@ public class AttachmentTempFileProvider extends FileProvider {
                 return;
             }
 
-            FileOutputStream outputStream = new FileOutputStream(tempFile);
-            InputStream inputStream = context.getContentResolver().openInputStream(uri);
-            if (inputStream == null) {
-                throw new IOException("Failed to resolve content at uri: " + uri);
-            }
-            IOUtils.copy(inputStream, outputStream);
+            // Stage the copy, then atomically publish it on the same filesystem.
+            File stagedFile = File.createTempFile("attachment-", ".tmp", tempFile.getParentFile());
+            try {
+                InputStream inputStream = context.getContentResolver().openInputStream(uri);
+                if (inputStream == null) {
+                    throw new IOException("Failed to open attachment content");
+                }
+                try (InputStream source = inputStream;
+                        FileOutputStream destination = new FileOutputStream(stagedFile)) {
+                    IOUtils.copy(source, destination);
+                    destination.getFD().sync();
+                }
 
-            outputStream.close();
-            IOUtils.closeQuietly(inputStream);
+                if (!stagedFile.renameTo(tempFile)) {
+                    throw new IOException("Failed to atomically publish attachment cache file");
+                }
+            } finally {
+                // A failed copy must never be reused as a complete attachment.
+                if (stagedFile.exists() && !stagedFile.delete()) {
+                    Timber.w("Could not delete incomplete attachment cache file");
+                }
+            }
         }
     }
 
