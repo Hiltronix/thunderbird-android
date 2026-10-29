@@ -14,6 +14,24 @@ settings, TLS certificate validation, direct dependencies, and release signing.
 Do not install or rely on a patched APK until the GitHub build, unit tests,
 merged-manifest validation, and on-device mail/account import checks pass.
 
+## CI verification completed on 2026-10-29
+
+- Signed APK GitHub Actions run (second attempt): **success**, including
+  `:mail:common:test`, `:app-thunderbird:lintFossRelease`,
+  `:app-thunderbird:assembleFossRelease`, Android `apksigner verify`,
+  application ID check, artifact upload, and signing-file cleanup:
+  https://github.com/Hiltronix/thunderbird-android/actions/runs/40813491629
+- Separate audit run: **success**, including resolved runtime dependency
+  inventory and `:app-thunderbird:lintFossRelease`:
+  https://github.com/Hiltronix/thunderbird-android/actions/runs/40813413945
+- Signed artifact: `Thunderbird-10.1-Hiltronix-SIGNED`.
+- These passing checks **do not** establish that every vulnerability, lint
+  warning, exported component, or network/data flow has been audited.
+- Pending: automated dependency-CVE and supply-chain scan, evaluation of
+  transitive/native dependencies, review of Android Lint warnings,
+  merged APK manifest validation, OAuth redirects for custom package
+  identity, and on-device tests of account import and IMAP/SMTP behavior.
+
 ## Changes in the Hiltronix branch
 
 - The independent Android package ID is
@@ -42,7 +60,7 @@ merged-manifest validation, and on-device mail/account import checks pass.
 
 ## Evidence and findings
 
-### Confirmed vulnerabilities addressed in code (testing pending)
+### Security findings addressed in code (CI tests passed; runtime verification pending)
 
 1. **Apache Mime4j header injection - CVE-2024-21742.**
    The vulnerable `apache-mime4j-dom` version `0.8.9` can compose messages with
