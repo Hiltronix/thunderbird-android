@@ -13,6 +13,11 @@ if (testCoverageEnabled) {
 android {
     namespace = "net.thunderbird.android"
 
+    buildFeatures {
+        // Needed for the build-specific Hiltronix Revision string resource.
+        resValues = true
+    }
+
     defaultConfig {
         applicationId = "net.thunderbird.android.hiltronix"
         testApplicationId = "net.thunderbird.android.hiltronix.tests"
