@@ -49,6 +49,36 @@ merged-manifest validation, and on-device mail/account import checks pass.
   released version as affected.
   Reference: https://jsoup.org/news/release-1.23.2
 
+## Continued review: attachment cache and message HTML (2026-10-29)
+
+- **Attachment-cache incomplete writes:** `AttachmentTempFileProvider` previously
+  copied an attachment directly to its final cache filename and leaked streams
+  when opening or copying failed. A later request could reuse a truncated
+  attachment. It now stages the copy under a temporary filename, closes both
+  streams with try-with-resources, calls `FileDescriptor.sync()`, and
+  atomically renames the fully written file into place. Incomplete files are
+  deleted after errors. The app must pass a signed build and attachment-sharing
+  runtime test before this hardening is considered validated.
+- **Untrusted email WebView local file access:** The message HTML renderer
+  already disables JavaScript and blocks remote network loads by default.
+  It now explicitly disables `file://` filesystem access and both deprecated
+  `file://` cross-origin access toggles on all supported API levels.
+  It retains `content://` access for inline attachment rendering. This
+  follows Android's recommendations for untrusted WebView content.
+  Reference:
+  https://developer.android.com/privacy-and-security/risks/webview-unsafe-file-inclusion
+- **FileProvider audit:** The decrypted and temporary attachment providers
+  are declared `android:exported="false"`; they issue time-limited
+  URI grants to external applications when sharing is requested. Their path
+  mappings are limited to `cache/decrypted` and `cache/temp`, rather than
+  granting access to the entire app-private filesystem.
+- **CodeQL execution management:** Added per-branch concurrency cancellation
+  so new scans supersede obsolete source revisions. SARIF artifact output has
+  been enabled, but actual findings have not yet been reviewed.
+- **Latest revision evidence:** The verified signed build at
+  `e7ae44ae` was `2026.10.29.12`. New hardening changes on the branch
+  have not yet been confirmed by a completed signed build.
+
 ## Follow-up review: TLS keystore durability and CodeQL evidence
 
 - The signed APK and automated security audit at commit
