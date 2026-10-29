@@ -49,6 +49,39 @@ merged-manifest validation, and on-device mail/account import checks pass.
   released version as affected.
   Reference: https://jsoup.org/news/release-1.23.2
 
+## Follow-up review: TLS keystore durability and CodeQL evidence
+
+- The signed APK and automated security audit at commit
+  `e7ae44aef0ed8310b5b747be2d590bfd82b413e2` passed:
+  signed-build run https://github.com/Hiltronix/thunderbird-android/actions/runs/40879248040
+  and audit run https://github.com/Hiltronix/thunderbird-android/actions/runs/40879247994.
+  The signed APK reported revision **2026.10.29.12** in its workflow logs.
+- **Local trusted-TLS-certificate durability:** the former
+  `LocalKeyStore.writeCertificateFile()` directly overwrote the existing
+  keystore. A crash while writing could leave the saved certificate file
+  truncated or corrupted. The update writes a temporary file in the same
+  directory, calls `FileDescriptor.sync()`, and replaces the destination via
+  `renameTo()` only after the new keystore has been completely serialized.
+  It also avoids logging full certificate details on mismatch.
+  Tests now verify persistence across reopening, sequential certificate saves,
+  no left-over temporary files after a successful save, and recovery when an
+  interrupted temporary file exists. CI verification is pending.
+- **CodeQL coverage:** the first Java/Kotlin CodeQL run completed, but the
+  log reports extraction of only 1589/2109 Kotlin and 292/345 Java files in
+  that invocation. A successful workflow is **not** proof of zero alerts.
+  CodeQL has therefore been configured to archive SARIF output for actual
+  findings review independently of the GitHub code-scanning alerts API.
+  Detailed findings review remains pending.
+- **Exported components:** the exported launcher/message-list activity is
+  required, the exported composition activity supports Android mailto/send
+  intents, and the AppAuth redirect receiver supports OAuth deep links.
+  Email attachment providers are not exported; the credential-export
+  SettingsProvider was previously removed. Removing the remaining activities
+  indiscriminately would break normal mail functions.
+- **Open issues:** inspect SARIF findings and CodeQL gaps, test the updated
+  keystore on Android, exercise account import and IMAP/SMTP/attachments,
+  and evaluate the implications of globally permitted cleartext traffic.
+
 ## October 29 OSV and Android Lint findings
 
 - **OSV inventory:** 253 resolved Maven dependencies scanned. The GitHub
