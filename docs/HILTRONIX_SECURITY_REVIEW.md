@@ -54,7 +54,13 @@ Explicit cloud/device transfer exclusions were already added.
   build now executes the targeted Robolectric storage regression test and
   continues running `:mail:common:test`.
 
-**Deferred encryption change:** Encrypting credentials at rest is not a
+**Deferred encryption change — user-approved for a future revision (2026-10-29):**
+Application-level encryption of stored passwords and OAuth state is
+**explicitly out of scope for the initial production release**. Thunderbird
+10.1 will continue using its private SQLite database and Android's
+system-level application isolation/encryption. This is an accepted residual
+risk, not a completed fix, and must be revisited in a later Hiltronix
+revision. Encrypting credentials at rest is not a
 single safe library upgrade. A careful migration must cover both account
 passwords and serialized OAuth refresh/access tokens, handle preexisting
 unencrypted settings, avoid plaintext rollback, and provide recovery when
@@ -71,6 +77,38 @@ This redesign remains an open security task.
 - On-device: account import, mail sync, attachments, background sync,
   biometric password display, and update from the previous signed APK.
 - Explore other sensitive logging paths and error-message contents.
+
+## Production readiness decision — 2026-10-29
+
+**Approved deferral:** App-level encryption of the existing private SQLite
+preferences database (saved email passwords and OAuth credentials). Do not
+undertake an untested migration before the first production release.
+
+**Release prerequisites:**
+
+- Signed release build and release Lint pass for the *same* source commit,
+  including `:mail:common:test`, `:mail:testing:test`, and the targeted
+  `:legacy:storage:testDebugUnitTest` regression suite.
+- New signed APK's revision, Android `versionCode`, app ID, signing
+  certificate, and non-debuggable status are verified against previous builds.
+- Latest resolved dependency scan has no untriaged vulnerabilities; CodeQL
+  results are reviewed and residual biometric-authentication warning is
+  documented rather than incorrectly marked fixed.
+- On-device smoke tests cover a non-primary test account: first-launch,
+  manual account import, IMAP folder/message sync, SMTP send, display of
+  HTML/plaintext with adjustable body text size, inline/regular
+  attachments, notifications/background sync, password display/biometric
+  unlock, and app update preserving account data.
+- OAuth account setup must be verified separately for each provider; the
+  custom Android application ID and signing certificate may be incompatible
+  with upstream OAuth client registrations.
+
+**Build incident:** Signed run
+https://github.com/Hiltronix/thunderbird-android/actions/runs/40897561089
+failed in `:legacy:storage:compileDebugUnitTestKotlin`, due to missing
+`assertk.assertions.isFalse` import in the newly added regression test.
+The test source has been corrected; verification of the next run remains
+outstanding.
 
 ## Build revisions and ongoing October 29 security work
 
