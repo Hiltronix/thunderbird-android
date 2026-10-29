@@ -235,6 +235,9 @@ dependencies {
 
     implementation(libs.androidx.work.runtime)
 
+    // Upgrade the vulnerable transitive Commons Lang 3.7 (CVE-2025-48924).
+    implementation(libs.commons.lang3)
+
     implementation(projects.feature.autodiscovery.api)
     debugImplementation(projects.backend.demo)
     debugImplementation(projects.feature.autodiscovery.demo)
