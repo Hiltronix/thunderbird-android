@@ -86,23 +86,41 @@ class LocalKeyStore(private val directoryProvider: KeyStoreDirectoryProvider) {
         writeCertificateFile()
     }
 
+    /**
+     * Persist trusted certificates without truncating the previous valid store.
+     * The temporary file is created in the same directory, allowing Android's
+     * Linux filesystem to replace the destination in a single rename.
+     *
+     * On an interrupted write, the original keystore remains intact. A stale
+     * temporary file is ignored when the store is reopened.
+     */
     private fun writeCertificateFile() {
         val keyStore = requireNotNull(this.keyStore)
+        val destination = requireNotNull(keyStoreFile)
+        var temporary: File? = null
 
-        FileOutputStream(keyStoreFile).use { keyStoreStream ->
-            try {
-                keyStore.store(keyStoreStream, PASSWORD)
-            } catch (e: FileNotFoundException) {
-                throw CertificateException("Unable to write KeyStore: ${e.message}", e)
-            } catch (e: CertificateException) {
-                throw CertificateException("Unable to write KeyStore: ${e.message}", e)
-            } catch (e: IOException) {
-                throw CertificateException("Unable to write KeyStore: ${e.message}", e)
-            } catch (e: NoSuchAlgorithmException) {
-                throw CertificateException("Unable to write KeyStore: ${e.message}", e)
-            } catch (e: KeyStoreException) {
-                throw CertificateException("Unable to write KeyStore: ${e.message}", e)
+        try {
+            temporary = File.createTempFile("${destination.name}.", ".tmp", keyStoreDirectory)
+            FileOutputStream(temporary).use { stream ->
+                keyStore.store(stream, PASSWORD)
+                stream.fd.sync()
             }
+
+            if (!temporary.renameTo(destination)) {
+                throw IOException("Atomic replacement of local KeyStore failed")
+            }
+        } catch (e: IOException) {
+            throw CertificateException("Unable to write local KeyStore", e)
+        } catch (e: CertificateException) {
+            throw CertificateException("Unable to write local KeyStore", e)
+        } catch (e: NoSuchAlgorithmException) {
+            throw CertificateException("Unable to write local KeyStore", e)
+        } catch (e: KeyStoreException) {
+            throw CertificateException("Unable to write local KeyStore", e)
+        } finally {
+            // A crash may leave behind an unreferenced temporary file; it
+            // never replaces a previously valid destination until complete.
+            temporary?.delete()
         }
     }
 
@@ -116,13 +134,7 @@ class LocalKeyStore(private val directoryProvider: KeyStoreDirectoryProvider) {
                 Timber.v("Couldn't find a stored certificate for %s:%d", host, port)
                 false
             } else if (storedCert != certificate) {
-                Timber.v(
-                    "Stored certificate for %s:%d doesn't match.\nExpected:\n%s\nActual:\n%s",
-                    host,
-                    port,
-                    storedCert,
-                    certificate,
-                )
+                Timber.v("Stored certificate for %s:%d doesn't match", host, port)
                 false
             } else {
                 Timber.v("Stored certificate for %s:%d matches the server certificate", host, port)
