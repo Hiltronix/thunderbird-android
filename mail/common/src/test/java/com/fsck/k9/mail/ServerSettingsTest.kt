@@ -4,6 +4,8 @@ import assertk.assertFailure
 import assertk.assertions.hasMessage
 import assertk.assertions.isInstanceOf
 import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ServerSettingsTest {
     @Test
@@ -18,6 +20,30 @@ class ServerSettingsTest {
             password = "123456",
             clientCertificateAlias = null,
         )
+    }
+
+    @Test
+    fun `diagnostic string hides account details and credentials`() {
+        val settings = ServerSettings(
+            type = "imap",
+            host = "private-mail.example",
+            port = 993,
+            connectionSecurity = ConnectionSecurity.SSL_TLS_REQUIRED,
+            authenticationType = AuthType.PLAIN,
+            username = "private-username",
+            password = "secret-credential",
+            clientCertificateAlias = "private-certificate",
+            extra = mapOf("oauth" to "secret-access-token"),
+        )
+
+        val diagnostics = settings.toString()
+
+        assertTrue(diagnostics.contains("ServerSettings(type=imap"))
+        assertFalse(diagnostics.contains("private-mail.example"))
+        assertFalse(diagnostics.contains("private-username"))
+        assertFalse(diagnostics.contains("secret-credential"))
+        assertFalse(diagnostics.contains("private-certificate"))
+        assertFalse(diagnostics.contains("secret-access-token"))
     }
 
     @Test
