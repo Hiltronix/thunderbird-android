@@ -49,6 +49,7 @@ circleImageView = "3.1.0"
 ckchangelog = "2.0.0-beta02"
 clikt = "5.0.2"
 commonsIo = "2.16.1"
+commonsLang3 = "3.18.0"
 dependencyCheckPlugin = "0.51.0"
 dependencyGuardPlugin = "0.5.0"
 detektPlugin = "1.23.5"
@@ -179,6 +180,7 @@ circleImageView = { module = "de.hdodenhof:circleimageview", version.ref = "circ
 ckchangelog-core = { module = "de.cketti.library.changelog:ckchangelog-core", version.ref = "ckchangelog" }
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commonsIo" }
+commons-lang3 = { module = "org.apache.commons:commons-lang3", version.ref = "commonsLang3" }
 detekt-plugin-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "detektPluginCompose" }
 diff-utils = { module = "io.github.java-diff-utils:java-diff-utils", version.ref = "javaDiffUtils" }
 fastadapter = { module = "com.mikepenz:fastadapter", version.ref = "fastAdapter" }
