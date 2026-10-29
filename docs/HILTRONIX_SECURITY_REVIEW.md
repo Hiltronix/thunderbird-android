@@ -14,6 +14,41 @@ settings, TLS certificate validation, direct dependencies, and release signing.
 Do not install or rely on a patched APK until the GitHub build, unit tests,
 merged-manifest validation, and on-device mail/account import checks pass.
 
+## Build revisions and ongoing October 29 security work
+
+- The About Thunderbird page now includes a **Hiltronix Revision** row
+  immediately after the existing Version row and before Authors. It displays
+  the build-embedded string (not today's date at runtime).
+- Signed GitHub Actions runs call `scripts/generate_hiltronix_revision.py`
+  before compilation. It counts attempted signed workflow runs for the
+  America/Winnipeg calendar date and generates `YYYY.MM.DD.Rev`.
+  The same build gets a monotonically increasing Android `versionCode`
+  (`YYYYMMDD * 100 + Rev`), allowing same-key updates.
+- Local unsigned builds without generated CI metadata are marked
+  **Development build**, rather than being misidentified as signed releases.
+- GitHub Actions has automatic tests for the date boundary and daily revision
+  sequence.
+- A separate OSV dependency scan now queries the real resolved release
+  Maven dependencies. The generated JSON results require manual triage;
+  a list of old dependencies alone is not evidence of exploitability.
+- **New finding:** Apache Commons Lang3 `3.7` was in the original resolved
+  dependency inventory. It is within the affected range of
+  `CVE-2025-48924` (uncontrolled recursion via `ClassUtils.getClass`).
+  The app now requests a patched `3.18.0` release. CI compilation and
+  final dependency resolution must confirm that it is selected.
+  Reference: https://commons.apache.org/proper/commons-lang/security.html
+- **Not affected by the notorious Text4Shell CVE:** the old dependency
+  `commons-text:1.3` predates the dangerous default lookups introduced
+  in `1.5`; `CVE-2022-42889` affects `1.5` through `1.9`. Upgrading
+  `1.3` purely on that advisory would be a false positive.
+  Reference: https://commons.apache.org/proper/commons-text/security.html
+- **jsoup `1.23.2`:** upstream release notes include the XML namespace
+  efficiency patch (`jhy/jsoup#2556`) corresponding to
+  `CVE-2026-75140`, despite third-party advisory wording that ambiguously
+  says "through 1.23.2." Verify library contents before classifying the
+  released version as affected.
+  Reference: https://jsoup.org/news/release-1.23.2
+
 ## CI verification completed on 2026-10-29
 
 - Signed APK GitHub Actions run (second attempt): **success**, including
