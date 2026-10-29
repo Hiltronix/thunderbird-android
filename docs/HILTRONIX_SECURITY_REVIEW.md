@@ -49,6 +49,46 @@ merged-manifest validation, and on-device mail/account import checks pass.
   released version as affected.
   Reference: https://jsoup.org/news/release-1.23.2
 
+## CodeQL SARIF triage: security findings (2026-10-29)
+
+The CodeQL SARIF artifact from run
+https://github.com/Hiltronix/thunderbird-android/actions/runs/40883976224
+contained exactly **two** Java/Kotlin findings. This is the actual analyzer
+result, not simply the workflow success indicator.
+
+1. **`java/android/insecure-local-authentication`**
+   at `TextFieldOutlinedPasswordBiometric.kt`.
+   The saved email-server password is already loaded in application memory,
+   and a `BiometricPrompt` success callback controls whether it appears in
+   plain text. The callback alone is *not* cryptographically bound to Android
+   Keystore. It can potentially be bypassed on a modified or compromised
+   device. This is an authentic architectural limitation rather than proof
+   that server passwords are encrypted at rest with biometric protection.
+   Mitigation now committed: password visibility and authentication state are
+   ephemeral (not `rememberSaveable`), and the component clears those values
+   on activity `ON_STOP`. The need for authentication is now based on whether
+   a stored password is nonempty. A true cryptographic fix would require
+   reworking how credentials are stored/revealed using a Keystore-backed
+   operation; it is **not** claimed fixed by the UI-state change.
+   Reference:
+   https://codeql.github.com/codeql-query-help/java/java-android-insecure-local-authentication/
+
+2. **`java/insecure-trustmanager`**
+   at `mail/testing/.../TestTrustedSocketFactory.java`.
+   The implicated implementation was `VeryTrustingTrustManager`, used only
+   by `mail/testing` in mock-server integration tests, not the production
+   TLS trust manager. It previously accepted any client/server certificate.
+   It now rejects client certificates and accepts only the specific pinned
+   mock-server certificate from `KeyStoreProvider`. Regression tests were
+   added, and the signed-build workflow now includes `:mail:testing:test`.
+   The new CodeQL result and tests must pass before considering this closed.
+
+No other findings were reported by **that SARIF file**. CodeQL reported
+partial extraction coverage (1589/2109 Kotlin and 292/345 Java files for one
+invocation); this is **not** proof that all sources were assessed. The
+production Android manifest, network communication, and credential storage
+must continue to be reviewed.
+
 ## Continued review: attachment cache and message HTML (2026-10-29)
 
 - **Attachment-cache incomplete writes:** `AttachmentTempFileProvider` previously
