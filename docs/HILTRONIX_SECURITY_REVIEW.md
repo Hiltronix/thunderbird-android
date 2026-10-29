@@ -14,6 +14,64 @@ settings, TLS certificate validation, direct dependencies, and release signing.
 Do not install or rely on a patched APK until the GitHub build, unit tests,
 merged-manifest validation, and on-device mail/account import checks pass.
 
+## October 29 credential-storage and current CodeQL follow-up
+
+### Verified previous build
+
+- Signed build `40889586604` succeeded with Hiltronix Revision
+  **2026.10.29.21**, including pinned test-TLS-certificate checks and release
+  signature/manifest validation:
+  https://github.com/Hiltronix/thunderbird-android/actions/runs/40889586604
+- The newest available CodeQL SARIF artifact, from successful analysis
+  `40889558293`, reports **one remaining finding**:
+  `java/android/insecure-local-authentication` in the biometric
+  password-reveal component. The test-only insecure trust-manager alert is
+  no longer reported. The biometric finding reflects the lack of cryptographic
+  binding between biometric authentication and credential release and must
+  not be treated as resolved by UI-only changes.
+
+### Credential persistence and leakage
+
+**Confirmed risk:** `AccountPreferenceSerializer` serializes incoming and
+outgoing `ServerSettings` into JSON, including `password`, and stores
+`oAuthState` in the app-private `preferences_storage` SQLite database.
+`K9StoragePersister` does not itself encrypt the saved values. The app-private
+location and Android filesystem protections reduce routine cross-app access,
+but cannot protect these values against a sufficiently privileged attacker,
+backup extraction by a compromised device, or full application compromise.
+Explicit cloud/device transfer exclusions were already added.
+
+**Immediate fixes committed (latest CI verification pending):**
+
+- Removed `Timber.d("Loading key ... value ...")` from
+  `K9StoragePersister.readAllValues()`, which previously could log passwords,
+  OAuth state and account information verbatim.
+- Overrode the Kotlin data class `ServerSettings.toString()` to redact
+  host, username, password, certificate alias and provider-specific extra
+  data, preventing accidental leakage through routine object diagnostics.
+- Added regression tests to confirm credentials are not emitted in storage
+  read logs or the server settings diagnostic representation. The signed
+  build now executes the targeted Robolectric storage regression test and
+  continues running `:mail:common:test`.
+
+**Deferred encryption change:** Encrypting credentials at rest is not a
+single safe library upgrade. A careful migration must cover both account
+passwords and serialized OAuth refresh/access tokens, handle preexisting
+unencrypted settings, avoid plaintext rollback, and provide recovery when
+Android Keystore keys become unavailable. The app's minimum API level and
+account backup/import compatibility also need consideration. Do not
+silently encrypt all preferences or bind background IMAP/SMTP credentials
+to per-use biometric prompts: that could break unattended mail syncing.
+This redesign remains an open security task.
+
+### Remaining validation
+
+- Verify the new signed CI build, targeted storage test, and CodeQL run.
+- Review the effect of the custom package/signature on OAuth redirect URIs.
+- On-device: account import, mail sync, attachments, background sync,
+  biometric password display, and update from the previous signed APK.
+- Explore other sensitive logging paths and error-message contents.
+
 ## Build revisions and ongoing October 29 security work
 
 - The About Thunderbird page now includes a **Hiltronix Revision** row
