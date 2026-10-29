@@ -53,6 +53,13 @@ class MessageWebView : WebView, KoinComponent {
             disableDisplayZoomControls()
 
             javaScriptEnabled = false
+            // Untrusted message HTML must not read local files. Inline
+            // attachment rendering uses content:// through the resolver.
+            allowFileAccess = false
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = false
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = false
             loadsImagesAutomatically = true
             setRenderPriority(RenderPriority.HIGH)
 
