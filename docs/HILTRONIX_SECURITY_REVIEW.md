@@ -49,6 +49,38 @@ merged-manifest validation, and on-device mail/account import checks pass.
   released version as affected.
   Reference: https://jsoup.org/news/release-1.23.2
 
+## October 29 OSV and Android Lint findings
+
+- **OSV inventory:** 253 resolved Maven dependencies scanned. The GitHub
+  Actions OSV query returned **0 packages with published OSV advisories**.
+  This confirms no advisory matches from that data source and run; it does
+  **not** establish that all app code, build plugins, or native dependencies
+  are vulnerability-free.
+  Scan run: https://github.com/Hiltronix/thunderbird-android/actions/runs/40877637101
+- **Resolved patches checked:** Apache Mime4j `0.8.14`, jsoup `1.23.2`,
+  Apache HttpClient `5.6.5`, OkHttp `4.12.1`, and Commons Lang `3.18.0`
+  appeared in the resolved release Gradle dependency tree.
+- **Android Lint security warning:** The upstream code implements a custom
+  `X509TrustManager`. The code calls the default system trust manager,
+  verifies the hostname, and permits explicitly trusted certificates for
+  an exact hostname and port if the default checks fail. This is a deliberate
+  self-hosted-server feature and should remain under careful review.
+- **Android backup/data-transfer exposure:** The upstream
+  `android:allowBackup="false"` may not block device-to-device migration
+  on some Android 12+ vendor devices. The custom branch now also declares
+  `android:fullBackupContent="false"` for older Android versions and explicit
+  `android:dataExtractionRules` excluding all app file/database/preferences
+  domains from cloud and device transfers. Manual account-settings export
+  and import remain separate features.
+  Reference: https://developer.android.com/identity/data/autobackup
+- **CodeQL:** The custom development branch is now scanned with GitHub CodeQL
+  for Java/Kotlin security findings. Results require inspection.
+  Run: https://github.com/Hiltronix/thunderbird-android/actions/runs/40879005152
+- **Remaining:** verify CI after the backup-rule change, inspect the
+  compiled Android manifest and Java/Kotlin CodeQL results, audit native
+  code and unreported vulnerabilities, and test account import and actual
+  mail operations on a device.
+
 ## CI verification completed on 2026-10-29
 
 - Signed APK GitHub Actions run (second attempt): **success**, including
@@ -136,8 +168,9 @@ merged-manifest validation, and on-device mail/account import checks pass.
 - **Email HTML display:** `MessageWebView` has JavaScript disabled and blocks
   remote network loads by default. A user preference can allow network images,
   so remote-content privacy still depends on that setting.
-- **App backup:** `app-common` sets `android:allowBackup="false"`. A
-  Thunderbird settings-file export is a separate feature and should still work.
+- **App backup:** `app-common` sets `android:allowBackup="false"`
+  and explicit Android backup/device-transfer exclusion rules. Thunderbird
+  settings-file export is separate and should still work.
 - **Telemetry:** `app-thunderbird` uses the no-op telemetry implementation for
   its release build. This does not constitute an audit of every network request.
 - **Signing and update isolation:** Unique package ID prevents Play Store from
