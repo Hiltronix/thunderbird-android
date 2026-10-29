@@ -19,6 +19,7 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoMoreInteractions
 import org.robolectric.RuntimeEnvironment
+import timber.log.Timber
 
 class StoragePersisterTest : K9RobolectricTest() {
     private var context: Context = RuntimeEnvironment.getApplication()
@@ -51,6 +52,30 @@ class StoragePersisterTest : K9RobolectricTest() {
         val values = storagePersister.loadValues().all
 
         assertThat(values).containsOnly("x" to "y")
+    }
+
+    @Test
+    fun loadingStoredSecretsDoesNotWriteThemToLogs() {
+        val secret = "PRIVATE_TEST_SECRET_credential_oauth_state"
+        val messages = mutableListOf<String>()
+        val logger = object : Timber.Tree() {
+            override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
+                messages.add(message)
+            }
+        }
+        Timber.plant(logger)
+        try {
+            storagePersister.doInTransaction(
+                prepareCallback(persistOp = { ops ->
+                    ops.put("sensitive.account.oAuthState", secret)
+                }),
+            )
+
+            assertThat(storagePersister.loadValues().getString("sensitive.account.oAuthState", "") == secret).isTrue()
+            assertThat(messages.any { secret in it }).isFalse()
+        } finally {
+            Timber.uproot(logger)
+        }
     }
 
     @Test
