@@ -4,20 +4,43 @@ Release candidate: Thunderbird 10.1, `net.thunderbird.android.hiltronix`
 Branch: `thunderbird-10.1-custom`
 Prepared: 2026-10-29
 
+## Verified signed release candidate — 2026-10-29
+
+- **Revision:** `2026.10.29.27`
+- **Android versionCode:** `2026102927`
+- **Application ID:** `net.thunderbird.android.hiltronix`
+- **Signed workflow:** https://github.com/Hiltronix/thunderbird-android/actions/runs/40913098496
+- **Source commit (APK):** `dc4eda39cbfa154be23f7782303b88acc32d081f`
+- **APK filename:** `Thunderbird-10.1-Hiltronix-SIGNED.apk`
+- **APK SHA-256:** `495c86c1e1a3870103dd356bec86f7af54575372891b10c02f1ba5c4f900956f`
+- **Signing certificate SHA-256:** `ab462f44c89ff8873a5e52dda4c5a33789d52799244b13146ebe1ef40143d706`
+- **APK signature:** v2 verified; Android release manifest and
+  non-debuggable status verified by workflow.
+- **CI:** signed build, TLS unit tests, storage logging regression tests,
+  Android Lint, dependency audit and CodeQL workflow passed.
+- **Latest CodeQL SARIF:** exactly one finding,
+  `java/android/insecure-local-authentication` in biometric
+  password reveal. Existing UI-state mitigations are included; this
+  architectural limitation remains documented and is not falsely claimed fixed.
+- **Database application-level encryption:** explicitly deferred by
+  owner to a future revision; Android application isolation remains in use.
+- **Production status:** automated release gate passed; **device acceptance
+  tests and final release approval remain open**.
+
 ## Release-build gate
 
-- [ ] Confirm the latest **signed** workflow succeeded at the intended commit
+- [x] Confirm the latest **signed** workflow succeeded at the intended commit
   (not merely the unsigned build or separate audit workflow).
-- [ ] `:mail:common:test` and `:mail:testing:test` pass.
-- [ ] `:legacy:storage:testDebugUnitTest`, including the sensitive-logging
+- [x] `:mail:common:test` and `:mail:testing:test` pass.
+- [x] `:legacy:storage:testDebugUnitTest`, including the sensitive-logging
   regression test, passes.
-- [ ] `:app-thunderbird:lintFossRelease` passes.
-- [ ] Release `apksigner verify`, application ID, non-debuggable manifest,
+- [x] `:app-thunderbird:lintFossRelease` passes.
+- [x] Release `apksigner verify`, application ID, non-debuggable manifest,
   absence of the credential-export provider, and Android `versionCode`
   verification all pass.
-- [ ] Review the latest OSV and CodeQL findings, documenting accepted
+- [x] Review the latest OSV and CodeQL findings, documenting accepted
   residual risk before tagging a production revision.
-- [ ] Download the artifact `Thunderbird-10.1-Hiltronix-SIGNED` and
+- [x] Download the artifact `Thunderbird-10.1-Hiltronix-SIGNED` and
   preserve its SHA-256 digest and signing-certificate fingerprint.
 
 ## On-device functional gate (Pixel 6, non-primary account first)
