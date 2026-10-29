@@ -1,6 +1,15 @@
 name: CodeQL - Code scanning
 
 on:
+  push:
+    branches:
+      - thunderbird-10.1-custom
+    paths:
+      - '.github/workflows/codeql.yml'
+      - '**/*.kt'
+      - '**/*.java'
+      - '**/*.kts'
+      - 'gradle/**'
   schedule:
     - cron: '0 10 * * 1'
   workflow_dispatch:
