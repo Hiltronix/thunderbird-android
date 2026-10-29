@@ -6,6 +6,7 @@ import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.containsOnly
 import assertk.assertions.isEmpty
+import assertk.assertions.isFalse
 import assertk.assertions.isSameInstanceAs
 import assertk.assertions.isTrue
 import com.fsck.k9.preferences.K9StoragePersister.StoragePersistOperationCallback
