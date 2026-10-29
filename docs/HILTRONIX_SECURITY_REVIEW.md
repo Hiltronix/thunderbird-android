@@ -34,9 +34,11 @@ merged-manifest validation, and on-device mail/account import checks pass.
   A match raises `CertificateException` before normal trust validation or the
   user-approved certificate fallback. No change is made to how unrelated
   self-hosted server certificates are accepted.
-- Release APKs are built unsigned in GitHub Actions. Keys and passwords are not
-  committed or uploaded. The separate local signing script uses the owner's
-  keystore on their own Windows computer.
+- The signed-release GitHub Actions workflow uses four encrypted repository
+  secrets (see below), reconstructs the private keystore only on the Actions
+  runner, verifies the package name and APK signature, and uploads a signed
+  artifact. The keystore and its passwords must never be committed or logged.
+  The local signing script remains an optional alternative.
 
 ## Evidence and findings
 
@@ -121,6 +123,33 @@ merged-manifest validation, and on-device mail/account import checks pass.
    `fossRelease` variant, check the merged manifest for exported providers,
    and perform real IMAP/SMTP sync, attachment, HTML rendering, and
    account-settings import tests before installation as a primary mail client.
+
+## GitHub Actions signed APK
+
+The dedicated workflow is
+`.github/workflows/build-thunderbird-10.1-signed.yml`.
+It is restricted to pushes on `thunderbird-10.1-custom` in the Hiltronix
+repository (and manual dispatch when available). It does not run on pull
+requests. The secrets must be **repository Actions secrets** with these names:
+
+- `THUNDERBIRD_KEYSTORE_BASE64`: Base64-encoded .p12/.jks file data.
+- `THUNDERBIRD_KEYSTORE_PASSWORD`: keystore password.
+- `THUNDERBIRD_KEY_ALIAS`: signing key alias in the keystore.
+- `THUNDERBIRD_KEY_PASSWORD`: password for the signing key.
+
+The workflow performs release lint and mail TLS tests before restoring the
+keystore, writes the transient Gradle
+`.signing/tb.release.upload.properties`, runs
+`:app-thunderbird:assembleFossRelease`, and checks the signature with
+`apksigner verify --verbose --print-certs` and application ID with
+`aapt dump badging`. The key and Gradle signing properties are deleted at
+the end of the job; the runner is ephemeral. Store the original keystore
+offline as well. People with write access to the workflow and branch can
+potentially modify it to expose secrets: limit write access accordingly.
+
+Download the artifact named `Thunderbird-10.1-Hiltronix-SIGNED` from the
+successful GitHub Actions run. No local signing step is needed for this
+artifact.
 
 ## Local signing on Windows
 
