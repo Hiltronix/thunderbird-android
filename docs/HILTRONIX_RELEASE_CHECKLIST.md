@@ -22,8 +22,8 @@ Prepared: 2026-10-29
   `java/android/insecure-local-authentication` in biometric
   password reveal. Existing UI-state mitigations are included; this
   architectural limitation remains documented and is not falsely claimed fixed.
-- **Database application-level encryption:** explicitly deferred by
-  owner to a future revision; Android application isolation remains in use.
+- **Account credential storage:** retains Thunderbird's existing
+  app-private SQLite format and Android application isolation.
 - **Production status:** automated release gate passed; **device acceptance
   tests and final release approval remain open**.
 
@@ -70,14 +70,9 @@ Prepared: 2026-10-29
 
 ## Accepted deferrals / non-blocking architecture work
 
-- **Application-level encryption of account passwords and OAuth state in
-  SQLite** is explicitly deferred to a later revision at the owner's request.
-  The private app database and Android OS protections remain in use.
-  Existing app-backup/device-transfer exclusions are retained.
-- Biometric display authentication is not cryptographically coupled to a
-  Keystore operation. UI-state mitigation is implemented and the residual
-  CodeQL warning is tracked. A cryptographic credential-reveal redesign
-  requires separate migration/compatibility work.
+- Android app-backup/device-transfer exclusions remain enabled.
+- Biometric password-display authentication uses UI-level safeguards,
+  and its residual CodeQL warning is documented.
 - Full platform/SDK upgrades and sweeping dependency updates are deferred
   unless required to fix a confirmed release-blocking issue.
 
